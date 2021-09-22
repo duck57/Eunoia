@@ -2,6 +2,9 @@
 
 """
 eunoia.py
+
+Filter an input dictionary into words which would fit the rules for inclusion
+in Christian Bök's Eunoia.  
 """
 
 from collections import Counter, defaultdict
@@ -56,6 +59,14 @@ def parse_dictionary(
     forbidden: str = None,
     show_stats: bool = False,
 ) -> Tuple[Dict, Dict]:
+    """
+    Parses the input dictionary
+
+    Returns two dicts, both of the form Dict[chr, List[str]]
+    The first dict is of the monovocalic words
+    The second dict is of words that would have made it into the first
+    dict if not for the presence of r forbidden letter
+    """
     word_list = defaultdict(list)
     filtered = defaultdict(list)
     vowels, forbidden = setup_vowels(vowels, forbidden)
