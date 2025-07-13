@@ -12,52 +12,59 @@ from typing import *
 import click
 
 
-def setup_vowels(vowels: Optional[str], forbidden: Optional[str]) -> Tuple[str, str]:
-    if vowels is None:
-        vowels = "AEIOU"
-    if forbidden is None:
-        forbidden = "Y"
-    return vowels.upper(), forbidden.upper()
+DEFAULT_VOWEL_STRING, DEFAULT_Y_STRING = "AEIOU", "Y"
+
+
+def setup_vowels(
+    vowels: str = DEFAULT_VOWEL_STRING, forbidden: str = DEFAULT_Y_STRING
+) -> Tuple[set[str], set[str]]:
+    return set(vowels.upper().strip()), set(forbidden.upper().strip())
+
+
+DEFAULT_VOWEL_SET, DEFAULT_Y_SET = setup_vowels()
 
 
 def analyze_word(
-    word: str, vowels: str = None, forbidden: str = None, preset: bool = False
-) -> Tuple[Union[chr, bool], bool]:
+    word: str, vowels: set[str] = DEFAULT_VOWEL_SET, forbidden: set[str] = DEFAULT_Y_SET
+) -> Tuple[Union[str, None, Literal[False]], str]:
     """
-    :param preset: has setup_vowels/2 been set up in a previous call?
     Returns a tuple:
     1. Returns the vowel if monovocalic, True if no vowels at all, or False if mixed vowels
     2. True if a forbidden letter is contained, false otherwise
     """
-    if not preset:  # no need to do this when looping
-        vowels, forbidden = setup_vowels(vowels, forbidden)
-    word = word.upper().strip()
-    letters = Counter(word)
-    v_lst = "".join([v for v in vowels if letters[v] > 0])
-    f_lst = "".join([f for f in forbidden if letters[f] > 0])
+    letters = set(word.upper().strip())
+    v_lst = "".join(letters & vowels)
+    f_lst = "".join(letters & forbidden)
     # print(f"{v_lst=} {f_lst=}")
     if not v_lst:  # no vowels
-        return True, bool(f_lst)
+        return None, f_lst
     if len(v_lst) > 1:  # multiple vowels
-        return False, bool(f_lst)
-    return v_lst, bool(f_lst)
+        return False, f_lst
+    return v_lst, f_lst  # only one vowel
 
 
 @click.command()
-@click.argument("dic", type=click.File())
+@click.argument("dic", type=click.File(), default="/usr/share/dict/words")
 @click.option(
-    "-v", "--vowels", type=click.STRING, default="AEIOU", help="List of vowels"
+    "-v",
+    "--vowels",
+    type=click.STRING,
+    default=DEFAULT_VOWEL_STRING,
+    help="List of vowels",
 )
 @click.option(
-    "-f", "--forbidden", type=click.STRING, default="Y", help="Letters to avoid"
+    "-f",
+    "--forbidden",
+    type=click.STRING,
+    default=DEFAULT_Y_STRING,
+    help="Letters to avoid",
 )
-@click.option("-h", "show_stats", type=click.BOOL, is_flag=True, flag_value=False)
-# @click.option("-o", type=click.File(), default=None)
+@click.option("-h", "hide_stats", type=click.BOOL, is_flag=True, flag_value=False)
 def parse_dictionary(
     dic: Iterable[str],
-    vowels: str = None,
-    forbidden: str = None,
-    show_stats: bool = False,
+    vowels: str = DEFAULT_VOWEL_STRING,
+    forbidden: str = DEFAULT_Y_STRING,
+    hide_stats: bool = True,
 ) -> Tuple[Dict, Dict]:
     """
     Parses the input dictionary
@@ -65,17 +72,17 @@ def parse_dictionary(
     Returns two dicts, both of the form Dict[chr, List[str]]
     The first dict is of the monovocalic words
     The second dict is of words that would have made it into the first
-    dict if not for the presence of r forbidden letter
+    dict if not for the presence of a forbidden letter
     """
     word_list = defaultdict(list)
     filtered = defaultdict(list)
-    vowels, forbidden = setup_vowels(vowels, forbidden)
+    vowel_set, forbidden_set = setup_vowels(vowels, forbidden)
     stats = Counter()
     for word in dic:
         word = word.strip()
-        vowel, y = analyze_word(word, vowels, forbidden, True)
+        vowel, y = analyze_word(word, vowel_set, forbidden_set)
         stats["total"] += 1  # total words analyzed
-        if not vowel:
+        if vowel is False:  # vowel is None = no vowels
             stats["N/A"] += 1  # words with multiple vowels
             continue
         stats["monovocalic"] += 1  # words with a single vowel
@@ -85,11 +92,8 @@ def parse_dictionary(
         else:
             stats["pure vowel"] += 1  # pure
             word_list[vowel].append(word)
-    if show_stats or True:  # always show stats for now
-        # print(f"{word_list}\n{filtered}\n{stats}")
-        vl = list(vowels)
-        vl.append(True)
-        for v in vl:
+    if not hide_stats:
+        for v in list(vowel_set) + [None]:
             print(f"{v}: {len(word_list[v])} + {len(filtered[v])} filtered")
         for stat in stats.keys():
             print(f"{stat}: {stats[stat]}")
