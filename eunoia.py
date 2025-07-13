@@ -59,7 +59,14 @@ def analyze_word(
     default=DEFAULT_Y_STRING,
     help="Letters to avoid",
 )
-@click.option("-h", "hide_stats", type=click.BOOL, is_flag=True, flag_value=False)
+@click.option(
+    "-h",
+    "hide_stats",
+    type=click.BOOL,
+    is_flag=True,
+    flag_value=False,
+    help="hide the output",
+)
 def parse_dictionary(
     dic: Iterable[str],
     vowels: str = DEFAULT_VOWEL_STRING,
@@ -72,7 +79,7 @@ def parse_dictionary(
     Returns two dicts, both of the form Dict[chr, List[str]]
     The first dict is of the monovocalic words
     The second dict is of words that would have made it into the first
-    dict if not for the presence of a forbidden letter
+    dict if not for the presence of a forbidden letter.
     """
     word_list = defaultdict(list)
     filtered = defaultdict(list)
