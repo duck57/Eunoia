@@ -79,8 +79,13 @@ class SPC:
     def geo_vals(self) -> Dict[str, float]:
         return self.round_dict({key: 2**x for key, x in self.log_spc.vals.items()})
 
-    def tabstring(self, s: Iterable) -> str:
-        return "\t".join(str(x) for x in s).expandtabs(self.tabwidth)
+    def tabstring(self, s: Iterable, header: str = "", end: str = "") -> str:
+        s = [str(x) for x in s]
+        if header:
+            s = [header] + s
+        if end:
+            s = s + [end]
+        return "\t".join(s).expandtabs(self.tabwidth)
 
     @cached_property
     def mean(self) -> float:
@@ -122,10 +127,10 @@ class SPC:
     def print_str(self) -> str:
         return "\n".join(
             [
-                self.tabstring(self.geo_vals.values()),
-                self.tabstring(self.logvalues.values()),
-                self.tabstring(self.vals.values()),
-                self.tabstring(self.vals.keys()),
+                self.tabstring(self.geo_vals.values(), "geo", "geo"),
+                self.tabstring(self.logvalues.values(), "log2", "log2"),
+                self.tabstring(self.vals.values(), "raw", "raw"),
+                self.tabstring(self.vals.keys(), "type", "type"),
                 f"\tn={len(self.raw_data)}\t∑={sum(self.raw_data)}",
                 f"2σ outliers\t{self.outs(2 * self.sd)}",
                 f"\tlog\t{self.abs_outliers(*exp_range(self.log_spc.two_sd))}",
